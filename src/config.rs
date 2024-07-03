@@ -1,7 +1,15 @@
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::fs;
+use once_cell::sync::OnceCell;
 
+/// Represents the configuration needed for the application.
+///
+/// # Fields
+///
+/// * `organization_id` - The ID of the organization.
+/// * `yandex_client_id` - The client ID for Yandex.
+/// * `yandex_client_secret` - The client secret for Yandex.
+/// * `redirect_uri` - The redirect URI for the application.
 #[derive(Deserialize, Debug)]
 pub struct Config {
     pub organization_id: String,
@@ -11,12 +19,29 @@ pub struct Config {
 }
 
 impl Config {
+    /// Loads the configuration from a file.
+    ///
+    /// # Arguments
+    ///
+    /// * `file_path` - The path to the configuration file.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Self, Box<dyn std::error::Error>>` - The configuration object or an error.
     pub fn from_file(file_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let config_str = fs::read_to_string(file_path)?;
         let config: Config = toml::from_str(&config_str)?;
         Ok(config)
     }
 
+    /// Returns a global configuration instance.
+    ///
+    /// This method initializes the configuration from `config.toml` if it has not been initialized yet,
+    /// and then returns a reference to the configuration.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the configuration file cannot be loaded.
     pub fn global() -> &'static Self {
         static INSTANCE: OnceCell<Config> = OnceCell::new();
         INSTANCE.get_or_init(|| {

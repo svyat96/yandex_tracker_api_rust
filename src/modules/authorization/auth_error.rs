@@ -15,35 +15,6 @@ use warp::reject::Reject;
 /// * `ChannelError` - Indicates an error with the communication channel.
 /// * `CustomError` - A custom error type for other errors.
 /// * `LoadTokenFileError` - Indicates an error when loading the token file.
-///
-/// # Examples
-///
-/// ```
-/// use thiserror::Error;
-///
-/// #[derive(Error, Debug)]
-/// pub enum AuthError {
-///     #[error("Environment variable error: {0}")]
-///     EnvVarError(#[from] std::env::VarError),
-///
-///     #[error("Request error: {0}")]
-///     RequestError(#[from] reqwest::Error),
-///
-///     #[error("Timeout while waiting for token")]
-///     TimeoutError,
-///
-///     #[error("Channel error")]
-///     ChannelError,
-///
-///     #[error("Custom error: {0}")]
-///     CustomError(String),
-///
-///     #[error("Load token file error!")]
-///     LoadTokenFileError,
-/// }
-///
-/// impl Reject for AuthError {}
-/// ```
 #[derive(Error, Debug)]
 pub enum AuthError {
     /// Error for missing or invalid environment variables.

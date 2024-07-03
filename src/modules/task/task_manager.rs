@@ -15,14 +15,6 @@ use reqwest::Client;
 /// * `client` - The HTTP client used for making requests to the Yandex Tracker API.
 /// * `token` - The authorization token for accessing the Yandex Tracker API.
 /// * `org_id` - The organization ID used in requests to the Yandex Tracker API.
-///
-/// # Examples
-///
-/// ```
-/// let token_response = TokenResponse { access_token: "your_access_token".to_string(), expires_in: 3600 };
-/// let org_id = "your_org_id".to_string();
-/// let task_manager = TaskManager::new(token_response, org_id);
-/// ```
 pub struct TaskManager {
     client: Client,
     token: TokenResponse,
@@ -40,14 +32,6 @@ impl TaskManager {
     /// # Returns
     ///
     /// * `TaskManager` instance.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let token_response = TokenResponse { access_token: "your_access_token".to_string(), expires_in: 3600 };
-    /// let org_id = "your_org_id".to_string();
-    /// let task_manager = TaskManager::new(token_response, org_id);
-    /// ```
     pub fn new(token: TokenResponse, org_id: String) -> Self {
         TaskManager {
             client: Client::new(),
@@ -69,16 +53,6 @@ impl TaskManager {
     /// # Returns
     ///
     /// * `Result<(), reqwest::Error>` indicating success or failure.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let task_batch = TaskBatch::new(...);  // create or load your TaskBatch
-    /// match task_manager.process_tasks(task_batch).await {
-    ///     Ok(_) => println!("Tasks processed successfully"),
-    ///     Err(err) => eprintln!("Error processing tasks: {}", err),
-    /// }
-    /// ```
     pub async fn process_tasks(&self, task_batch: TaskBatch) -> Result<(), reqwest::Error> {
         let mut mut_task_batch = task_batch.clone();
         for task_data in &task_batch.created {
@@ -130,16 +104,6 @@ impl TaskManager {
     /// # Returns
     ///
     /// * `Result<(), reqwest::Error>` indicating success or failure.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let task_data = CreatedTask { ... };  // initialize with task data
-    /// match task_manager.create_task(task_data).await {
-    ///     Ok(_) => println!("Task created successfully"),
-    ///     Err(err) => eprintln!("Error creating task: {}", err),
-    /// }
-    /// ```
     async fn create_task(&self, task_data: CreatedTask) -> Result<(), reqwest::Error> {
         let response = self
             .client
@@ -167,17 +131,6 @@ impl TaskManager {
     /// # Returns
     ///
     /// * `Result<(), reqwest::Error>` indicating success or failure.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let issue_id = "TASK-1";
-    /// let task_data = UpdatedTask { ... };  // initialize with updated task data
-    /// match task_manager.update_task(issue_id, task_data).await {
-    ///     Ok(_) => println!("Task updated successfully"),
-    ///     Err(err) => eprintln!("Error updating task: {}", err),
-    /// }
-    /// ```
     async fn update_task(
         &self,
         issue_id: &str,
@@ -211,16 +164,6 @@ impl TaskManager {
     /// # Returns
     ///
     /// * `Result<(), reqwest::Error>` indicating success or failure.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let issue_id = "TASK-2";
-    /// match task_manager.delete_task(issue_id).await {
-    ///     Ok(_) => println!("Task deleted successfully"),
-    ///     Err(err) => eprintln!("Error deleting task: {}", err),
-    /// }
-    /// ```
     async fn delete_task(&self, issue_id: &str) -> Result<(), reqwest::Error> {
         let response = self
             .client
@@ -249,16 +192,6 @@ impl TaskManager {
     /// # Returns
     ///
     /// * `Result<(), std::io::Error>` indicating success or failure.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let task_batch = TaskBatch::new(...);  // create or load your TaskBatch
-    /// match task_manager.save_task_batch(&task_batch) {
-    ///     Ok(_) => println!("Task batch saved successfully"),
-    ///     Err(err) => eprintln!("Error saving task batch: {}", err),
-    /// }
-    /// ```
     fn save_task_batch(&self, task_batch: &TaskBatch) -> Result<(), std::io::Error> {
         let tasks_json = serde_json::to_string_pretty(task_batch)?;
         std::fs::write("tasks.json", tasks_json)?;

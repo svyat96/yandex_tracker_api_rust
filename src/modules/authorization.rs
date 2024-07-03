@@ -19,14 +19,6 @@ use crate::config::Config;
 ///
 /// * `tx` - Sender for sending the result containing the token or an error.
 /// * `rx` - Receiver for receiving the result containing the token or an error.
-///
-/// # Examples
-///
-/// ```
-/// let mut authorization = Authorization::new();
-/// let token_response = authorization.authorize().await?;
-/// println!("Access Token: {}", token_response.access_token);
-/// ```
 pub struct Authorization {
     tx: Sender<Result<TokenResponse, AuthError>>,
     rx: Receiver<Result<TokenResponse, AuthError>>,
@@ -41,12 +33,6 @@ impl Authorization {
     /// # Returns
     ///
     /// * `Authorization` - a new instance of the `Authorization` struct.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let authorization = Authorization::new();
-    /// ```
     pub fn new() -> Self {
         let (tx, rx) = mpsc::channel(1);
         Authorization { tx, rx }
@@ -61,16 +47,6 @@ impl Authorization {
     ///
     /// * `Ok(TokenResponse)` - if the token retrieval or authorization was successful.
     /// * `Err(AuthError)` - if there was an error during the token retrieval or authorization process.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut authorization = Authorization::new();
-    /// match authorization.authorize().await {
-    ///     Ok(token_response) => println!("Access Token: {}", token_response.access_token),
-    ///     Err(err) => eprintln!("Authorization error: {}", err),
-    /// }
-    /// ```
     pub async fn authorize(&mut self) -> Result<TokenResponse, AuthError> {
         match self.read_local_access_token().await {
             Ok(token_response) => return Ok(token_response),
@@ -97,16 +73,6 @@ impl Authorization {
     ///
     /// * `Ok(TokenResponse)` - if the token is successfully loaded and valid.
     /// * `Err(AuthError)` - if the token file is not found or there is an error loading the token.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let authorization = Authorization::new();
-    /// match authorization.read_local_access_token().await {
-    ///     Ok(token_response) => println!("Token loaded successfully: {:?}", token_response),
-    ///     Err(err) => eprintln!("Failed to load token: {}", err),
-    /// }
-    /// ```
     async fn read_local_access_token(&self) -> Result<TokenResponse, AuthError> {
         if !TokenResponse::token_exists() {
             return Err(AuthError::CustomError("Token file not found".to_string()));
@@ -134,16 +100,6 @@ impl Authorization {
     ///
     /// * `Ok(TokenResponse)` - if the token is successfully obtained.
     /// * `Err(AuthError)` - if there is an error during the authorization process or if the operation times out.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut authorization = Authorization::new();
-    /// match authorization.perform_authorization().await {
-    ///     Ok(token_response) => println!("Token obtained successfully: {:?}", token_response),
-    ///     Err(err) => eprintln!("Authorization error: {}", err),
-    /// }
-    /// ```
     async fn perform_authorization(&mut self) -> Result<TokenResponse, AuthError> {
         let auth_url = format!(
             "https://oauth.yandex.ru/authorize?response_type=code&client_id={}&redirect_uri={}",
@@ -180,16 +136,6 @@ impl Authorization {
     ///
     /// * `Ok(TokenResponse)` - if the token is received successfully.
     /// * `Err(AuthError)` - if there is an error receiving the token.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut authorization = Authorization::new();
-    /// match authorization.wait_for_token().await {
-    ///     Ok(token_response) => println!("Token received: {:?}", token_response),
-    ///     Err(err) => eprintln!("Failed to receive token: {}", err),
-    /// }
-    /// ```
     async fn wait_for_token(&mut self) -> Result<TokenResponse, AuthError> {
         match self.rx.recv().await {
             Some(result) => result,
@@ -210,14 +156,6 @@ impl Authorization {
     /// # Returns
     ///
     /// A Warp filter to handle the redirect and exchange the authorization code for a token.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let tx = mpsc::channel(1).0;
-    /// let filter = Authorization::handle_redirect(tx);
-    /// warp::serve(filter).run(([127, 0, 0, 1], 8080)).await;
-    /// ```
     fn handle_redirect(
         tx: Sender<Result<TokenResponse, AuthError>>,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {

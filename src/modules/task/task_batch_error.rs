@@ -11,27 +11,6 @@ use thiserror::Error;
 /// * `DeserializeError` - Indicates an error occurred while deserializing the JSON data.
 /// * `EmptyTasksError` - Indicates that the tasks cannot be empty.
 /// * `EmptyTaskOperationsError` - Indicates that the task operations cannot be empty.
-///
-/// # Examples
-///
-/// ```
-/// use thiserror::Error;
-///
-/// #[derive(Error, Debug)]
-/// pub enum TaskBatchError {
-///     #[error("Error reading the file")]
-///     ReadError(#[from] std::io::Error),
-///
-///     #[error("Error deserializing JSON")]
-///     DeserializeError(#[from] serde_json::Error),
-///
-///     #[error("Tasks cannot be empty")]
-///     EmptyTasksError,
-///
-///     #[error("TaskOperations cannot be empty")]
-///     EmptyTaskOperationsError,
-/// }
-/// ```
 #[derive(Error, Debug)]
 pub enum TaskBatchError {
     /// Error reading the file.
@@ -43,10 +22,6 @@ pub enum TaskBatchError {
     DeserializeError(#[from] serde_json::Error),
 
     /// Tasks cannot be empty.
-    #[error("Tasks cannot be empty")]
-    EmptyTasksError,
-
-    /// TaskOperations cannot be empty.
-    #[error("TaskOperations cannot be empty")]
-    EmptyTaskOperationsError,
+    #[error("Task invalid")]
+    InvalidTaskError,
 }

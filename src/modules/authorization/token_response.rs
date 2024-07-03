@@ -12,15 +12,6 @@ use std::io::Write;
 ///
 /// * `access_token` - The access token.
 /// * `expires_in` - The expiration time of the token in seconds.
-///
-/// # Examples
-///
-/// ```
-/// let token_response = TokenResponse {
-///     access_token: "your_access_token".to_string(),
-///     expires_in: 3600,
-/// };
-/// ```
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TokenResponse {
     /// The access token.
@@ -41,16 +32,6 @@ impl TokenResponse {
     ///
     /// * `true` - if the file exists.
     /// * `false` - if the file does not exist.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// if TokenResponse::token_exists() {
-    ///     println!("Token file exists");
-    /// } else {
-    ///     println!("Token file does not exist");
-    /// }
-    /// ```
     pub fn token_exists() -> bool {
         Path::new(Self::FILENAME).exists()
     }
@@ -62,16 +43,6 @@ impl TokenResponse {
     /// # Returns
     ///
     /// * `io::Result<()>` - indicating the success or failure of the operation.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let token_response = TokenResponse {
-    ///     access_token: "your_access_token".to_string(),
-    ///     expires_in: 3600,
-    /// };
-    /// token_response.save_to_file().expect("Failed to save token");
-    /// ```
     pub fn save_to_file(&self) -> io::Result<()> {
         let json = serde_json::to_string(self)?;
         let mut file = fs::File::create(Self::FILENAME)?;
@@ -86,13 +57,6 @@ impl TokenResponse {
     /// # Returns
     ///
     /// * `io::Result<TokenResponse>` - containing the loaded token.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let token_response = TokenResponse::load_from_file().expect("Failed to load token");
-    /// println!("Loaded token: {:?}", token_response);
-    /// ```
     pub fn load_from_file() -> io::Result<TokenResponse> {
         let json = fs::read_to_string(Self::FILENAME)?;
         let token = serde_json::from_str(&json)?;
