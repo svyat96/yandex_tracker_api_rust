@@ -25,7 +25,7 @@ use std::hash::{Hash, Hasher};
 /// * `author` - The author of the task (optional).
 /// * `unique` - A unique identifier for the task (optional).
 /// * `attachment_ids` - A list of attachment IDs associated with the task (optional).
-/// * `subtasks` - A set of subtasks associated with this task (optional).
+/// * `subtasks` - A set of subtasks associated with this task (optional, not serialized).
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CreatedTask {
     pub queue: String,
@@ -36,7 +36,7 @@ pub struct CreatedTask {
     pub description: Option<String>,
     #[serde(default)]
     pub sprint: Vec<String>,
-    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
     pub task_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub priority: Option<String>,
@@ -52,30 +52,21 @@ pub struct CreatedTask {
     pub attachment_ids: Vec<String>,
     #[serde(default, skip_serializing)]
     pub subtasks: HashSet<CreatedTask>,
-    #[serde(skip)]
-    pub id: String,
 }
 
 impl CreatedTask {
-    pub fn set_id(&mut self, id: String) {
-        self.id = id.clone();
-
-        let mut new_subtasks = HashSet::<CreatedTask>::new();
-
-        for v in self.subtasks.iter() {
-            new_subtasks.insert(v.set(id.clone()));
-        }
-
-        self.subtasks = new_subtasks;
-    }
-
-    pub fn subtask_count(&self) -> i32 {
-        return self
-            .subtasks
-            .iter()
-            .fold(0, |acc, subtask| acc + subtask.subtask_count());
-    }
-
+    /// Sets the parent task ID for the current task.
+    ///
+    /// This method creates a new `CreatedTask` instance with the specified parent ID,
+    /// while preserving all other fields from the original task.
+    ///
+    /// # Arguments
+    ///
+    /// * `parent` - A `String` representing the parent task ID.
+    ///
+    /// # Returns
+    ///
+    /// A new `CreatedTask` instance with the parent ID set.
     pub fn set(&self, parent: String) -> CreatedTask {
         return CreatedTask {
             queue: self.queue.clone(),
@@ -91,7 +82,6 @@ impl CreatedTask {
             unique: self.unique.clone(),
             attachment_ids: self.attachment_ids.clone(),
             subtasks: self.subtasks.clone(),
-            id: self.id.clone(),
         };
     }
     /// Checks if the `CreatedTask` has the required fields.
@@ -104,21 +94,6 @@ impl CreatedTask {
     /// * `false` - If either `queue` or `summary` is empty.
     pub fn has_required_fields(&self) -> bool {
         !self.queue.is_empty() && !self.summary.is_empty()
-    }
-
-    /// Validates if the task is a valid subtask.
-    ///
-    /// This method returns `true` if the `parent` field is present and not empty.
-    ///
-    /// # Returns
-    ///
-    /// * `true` - If `parent` is present and not empty.
-    /// * `false` - If `parent` is `None` or empty.
-    pub fn is_valid_subtask(&self) -> bool {
-        self.parent
-            .as_ref()
-            .map(|parent| !parent.is_empty())
-            .unwrap_or(false)
     }
 }
 
@@ -261,7 +236,6 @@ mod tests {
 
         let task: CreatedTask = serde_json::from_str(json_data).unwrap();
         assert!(task.has_required_fields());
-        assert!(task.is_valid_subtask());
     }
 
     #[test]
@@ -274,7 +248,6 @@ mod tests {
 
         let task: CreatedTask = serde_json::from_str(json_data).unwrap();
         assert!(task.has_required_fields());
-        assert!(!task.is_valid_subtask());
     }
 
     #[test]
@@ -287,6 +260,5 @@ mod tests {
 
         let task: CreatedTask = serde_json::from_str(json_data).unwrap();
         assert!(!task.has_required_fields());
-        assert!(!task.is_valid_subtask());
     }
 }

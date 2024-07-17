@@ -18,6 +18,7 @@ fn test_create_task() {
         author: Some(String::from("author1")),
         unique: Some(String::from("unique1")),
         attachment_ids: vec![String::from("attachment1")],
+        subtasks: HashSet::new(),
     };
     created_tasks.insert(task);
 
