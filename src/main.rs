@@ -2,9 +2,10 @@ mod config;
 mod modules;
 
 use config::Config;
-use modules::authorization::Authorization;
+use modules::{authorization::Authorization, task::task_api_client::TaskApiClient};
 use modules::task::task_batch::TaskBatch;
-use modules::task::task_manager::TaskManager;
+use modules::task::task_manager::TaskBatchHandler;
+
 
 use env_logger;
 use log::{error, info};
@@ -37,10 +38,12 @@ async fn main() {
         }
     };
 
-    // Создание TaskManager с использованием токена и org_id
-    let task_manager = TaskManager::new(token_response, Config::global().organization_id.clone());
+    let batch_handler = TaskBatchHandler::new(TaskApiClient::new(token_response.access_token, Config::global().organization_id.clone()));
 
-    if let Err(err) = task_manager.process_tasks(task_batch).await {
-        error!("Error creating task: {}", err);
-    }
+    let str = format!("Success: {:#?}", task_batch);
+
+    match batch_handler.process_tasks(task_batch).await {
+        Ok(_) => println!("{:#?}", str),
+        Err(err) => println!("Error: {:#?}", err),
+    };
 }

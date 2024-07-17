@@ -1742,4 +1742,5 @@ dependencies = [
  "tokio",
  "toml",
  "warp",
+ "yandex_tracker_api_rust",
 ]
