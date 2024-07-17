@@ -1,8 +1,13 @@
+pub mod error_response;
+pub mod success_response;
+pub mod task_api_client;
 pub mod task_batch;
 pub mod task_batch_error;
 pub mod task_manager;
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 
 /// Represents a task to be created in Yandex Tracker.
 ///
@@ -20,37 +25,121 @@ use serde::{Deserialize, Serialize};
 /// * `author` - The author of the task (optional).
 /// * `unique` - A unique identifier for the task (optional).
 /// * `attachment_ids` - A list of attachment IDs associated with the task (optional).
-#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, Clone)]
+/// * `subtasks` - A set of subtasks associated with this task (optional).
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CreatedTask {
     pub queue: String,
     pub summary: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(default)]
     pub sprint: Vec<String>,
-    #[serde(rename = "type")]
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub task_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub priority: Option<String>,
     #[serde(default)]
     pub followers: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub assignee: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unique: Option<String>,
     #[serde(rename = "attachmentIds", default)]
     pub attachment_ids: Vec<String>,
+    #[serde(default, skip_serializing)]
+    pub subtasks: HashSet<CreatedTask>,
+    #[serde(skip)]
+    pub id: String,
 }
 
 impl CreatedTask {
-    /// Checks if the `CreatedTask` has required fields.
+    pub fn set_id(&mut self, id: String) {
+        self.id = id.clone();
+
+        let mut new_subtasks = HashSet::<CreatedTask>::new();
+
+        for v in self.subtasks.iter() {
+            new_subtasks.insert(v.set(id.clone()));
+        }
+
+        self.subtasks = new_subtasks;
+    }
+
+    pub fn subtask_count(&self) -> i32 {
+        return self
+            .subtasks
+            .iter()
+            .fold(0, |acc, subtask| acc + subtask.subtask_count());
+    }
+
+    pub fn set(&self, parent: String) -> CreatedTask {
+        return CreatedTask {
+            queue: self.queue.clone(),
+            summary: self.summary.clone(),
+            parent: Some(parent),
+            description: self.description.clone(),
+            sprint: self.sprint.clone(),
+            task_type: self.task_type.clone(),
+            priority: self.priority.clone(),
+            followers: self.followers.clone(),
+            assignee: self.assignee.clone(),
+            author: self.author.clone(),
+            unique: self.unique.clone(),
+            attachment_ids: self.attachment_ids.clone(),
+            subtasks: self.subtasks.clone(),
+            id: self.id.clone(),
+        };
+    }
+    /// Checks if the `CreatedTask` has the required fields.
     ///
     /// This method returns `true` if both `queue` and `summary` are not empty.
     ///
     /// # Returns
     ///
-    /// * `true` - if both `queue` and `summary` are not empty.
-    /// * `false` - if either `queue` or `summary` is empty.
+    /// * `true` - If both `queue` and `summary` are not empty.
+    /// * `false` - If either `queue` or `summary` is empty.
     pub fn has_required_fields(&self) -> bool {
         !self.queue.is_empty() && !self.summary.is_empty()
+    }
+
+    /// Validates if the task is a valid subtask.
+    ///
+    /// This method returns `true` if the `parent` field is present and not empty.
+    ///
+    /// # Returns
+    ///
+    /// * `true` - If `parent` is present and not empty.
+    /// * `false` - If `parent` is `None` or empty.
+    pub fn is_valid_subtask(&self) -> bool {
+        self.parent
+            .as_ref()
+            .map(|parent| !parent.is_empty())
+            .unwrap_or(false)
+    }
+}
+
+impl PartialEq for CreatedTask {
+    /// Compares two `CreatedTask` instances for equality.
+    ///
+    /// This implementation considers two tasks equal if their `queue` and `summary` fields are equal.
+    fn eq(&self, other: &Self) -> bool {
+        self.queue == other.queue && self.summary == other.summary
+    }
+}
+
+impl Eq for CreatedTask {}
+
+impl Hash for CreatedTask {
+    /// Hashes the `CreatedTask` instance.
+    ///
+    /// This implementation hashes the `queue` and `summary` fields.
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.queue.hash(state);
+        self.summary.hash(state);
     }
 }
 
@@ -129,5 +218,75 @@ impl UpdateOperation {
     /// * `false` - if at least one field of `mut_task` is not `None` or empty.
     pub fn is_empty(&self) -> bool {
         self.mut_task.is_empty()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json;
+
+    #[test]
+    fn test_created_task_full() {
+        let json_data = r#"
+        {
+            "queue": "main_queue",
+            "summary": "Full Task",
+            "parent": "parent_task_id",
+            "description": "This is a full task",
+            "sprint": ["sprint1", "sprint2"],
+            "type": "task",
+            "priority": "high",
+            "followers": ["follower1@example.com", "follower2@example.com"],
+            "assignee": "assignee@example.com",
+            "author": "author@example.com",
+            "unique": "unique_id",
+            "attachmentIds": ["attachment1", "attachment2"],
+            "subtasks": [{
+                "queue": "main_queue",
+                "summary": "Full Task",
+                "parent": "parent_task_id",
+                "description": "This is a full task",
+                "sprint": ["sprint1", "sprint2"],
+                "type": "task",
+                "priority": "high",
+                "followers": ["follower1@example.com", "follower2@example.com"],
+                "assignee": "assignee@example.com",
+                "author": "author@example.com",
+                "unique": "unique_id",
+                "attachmentIds": ["attachment1", "attachment2"],
+                "subtasks": []
+        }]
+        }"#;
+
+        let task: CreatedTask = serde_json::from_str(json_data).unwrap();
+        assert!(task.has_required_fields());
+        assert!(task.is_valid_subtask());
+    }
+
+    #[test]
+    fn test_created_task_minimal() {
+        let json_data = r#"
+        {
+            "queue": "main_queue",
+            "summary": "Minimal Task"
+        }"#;
+
+        let task: CreatedTask = serde_json::from_str(json_data).unwrap();
+        assert!(task.has_required_fields());
+        assert!(!task.is_valid_subtask());
+    }
+
+    #[test]
+    fn test_created_task_empty_fields() {
+        let json_data = r#"
+        {
+            "queue": "",
+            "summary": ""
+        }"#;
+
+        let task: CreatedTask = serde_json::from_str(json_data).unwrap();
+        assert!(!task.has_required_fields());
+        assert!(!task.is_valid_subtask());
     }
 }

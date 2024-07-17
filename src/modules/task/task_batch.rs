@@ -112,3 +112,128 @@ impl TaskBatch {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json;
+
+    #[test]
+    fn test_task_batch_full() {
+        let json_data = r#"
+        {
+            "created": [
+                {
+                    "queue": "main_queue",
+                    "summary": "Full Task",
+                    "parent": "parent_task_id",
+                    "description": "This is a full task",
+                    "sprint": ["sprint1", "sprint2"],
+                    "type": "task",
+                    "priority": "high",
+                    "followers": ["follower1@example.com", "follower2@example.com"],
+                    "assignee": "assignee@example.com",
+                    "author": "author@example.com",
+                    "unique": "unique_id",
+                    "attachmentIds": ["attachment1", "attachment2"],
+                    "subtasks": []
+                }
+            ],
+            "updated": [
+                {
+                    "issue_id": "TASK-123",
+                    "mut_task": {
+                        "summary": "Updated task summary",
+                        "description": "Updated description",
+                        "sprint": "new_sprint",
+                        "type": "task",
+                        "priority": "high",
+                        "followers": ["new_follower@example.com"],
+                        "attachmentIds": ["new_attachment1", "new_attachment2"],
+                        "descriptionAttachmentIds": ["desc_attachment1", "desc_attachment2"]
+                    }
+                }
+            ],
+            "deleted": ["TASK-124"]
+        }"#;
+
+        let task_batch: TaskBatch = serde_json::from_str(json_data).unwrap();
+        assert!(task_batch.is_valid());
+    }
+
+    #[test]
+    fn test_task_batch_minimal() {
+        let json_data = r#"
+        {
+            "created": [
+                {
+                    "queue": "main_queue",
+                    "summary": "Minimal Task"
+                }
+            ],
+            "updated": [],
+            "deleted": []
+        }"#;
+
+        let task_batch: TaskBatch = serde_json::from_str(json_data).unwrap();
+        assert!(task_batch.is_valid());
+    }
+
+    #[test]
+    fn test_task_batch_empty_fields() {
+        let json_data = r#"
+        {
+            "created": [
+                {
+                    "queue": "",
+                    "summary": ""
+                }
+            ],
+            "updated": [],
+            "deleted": []
+        }"#;
+
+        let task_batch: TaskBatch = serde_json::from_str(json_data).unwrap();
+        assert!(!task_batch.is_valid());
+    }
+
+    #[test]
+    fn test_invalid_updated_tasks() {
+        let json_data = r#"
+        {
+            "created": [],
+            "updated": [
+                {
+                    "issue_id": "TASK-123",
+                    "mut_task": {
+                        "summary": null,
+                        "description": null,
+                        "sprint": null,
+                        "type": null,
+                        "priority": null,
+                        "followers": [],
+                        "attachmentIds": [],
+                        "descriptionAttachmentIds": []
+                    }
+                }
+            ],
+            "deleted": []
+        }"#;
+
+        let task_batch: TaskBatch = serde_json::from_str(json_data).unwrap();
+        assert!(!task_batch.is_valid());
+    }
+
+    #[test]
+    fn test_invalid_deleted_tasks() {
+        let json_data = r#"
+        {
+            "created": [],
+            "updated": [],
+            "deleted": [""]
+        }"#;
+
+        let task_batch: TaskBatch = serde_json::from_str(json_data).unwrap();
+        assert!(!task_batch.is_valid());
+    }
+}
