@@ -25,9 +25,8 @@ use std::hash::{Hash, Hasher};
 /// * `author` - The author of the task (optional).
 /// * `unique` - A unique identifier for the task (optional).
 /// * `attachment_ids` - A list of attachment IDs associated with the task (optional).
-/// * `subtasks` - A set of subtasks associated with this task (optional, not serialized).
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CreatedTask {
+pub struct CreatedTaskBody {
     pub queue: String,
     pub summary: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -50,14 +49,108 @@ pub struct CreatedTask {
     pub unique: Option<String>,
     #[serde(rename = "attachmentIds", default)]
     pub attachment_ids: Vec<String>,
-    #[serde(default, skip_serializing)]
-    pub subtasks: HashSet<CreatedTask>,
 }
 
-impl CreatedTask {
+/// Represents the information of a created task in Yandex Tracker.
+///
+/// # Fields
+///
+/// * `queue` - The queue to which the task belongs.
+/// * `summary` - A brief summary of the task.
+/// * `parent` - The parent task ID (optional).
+/// * `description` - A detailed description of the task (optional).
+/// * `sprint` - The sprint associated with the task (optional).
+/// * `task_type` - The type of the task (optional).
+/// * `priority` - The priority level of the task (optional).
+/// * `followers` - A list of followers for the task (optional).
+/// * `assignee` - The user assigned to the task (optional).
+/// * `author` - The author of the task (optional).
+/// * `unique` - A unique identifier for the task (optional).
+/// * `attachment_ids` - A list of attachment IDs associated with the task (optional).
+/// * `subtasks` - A set of subtasks associated with this task.
+#[derive(Serialize, Debug, Deserialize, Clone)]
+pub struct CreatedTaskInfo {
+    pub queue: String,
+    pub summary: String,
+    pub parent: Option<String>,
+    pub description: Option<String>,
+    pub sprint: Vec<String>,
+    pub task_type: Option<String>,
+    pub priority: Option<String>,
+    pub followers: Vec<String>,
+    pub assignee: Option<String>,
+    pub author: Option<String>,
+    pub unique: Option<String>,
+    #[serde(rename = "attachmentIds", default)]
+    pub attachment_ids: Vec<String>,
+    pub subtasks: HashSet<CreatedTaskInfo>,
+}
+
+impl From<CreatedTaskInfo> for CreatedTaskBody {
+    /// Converts a `CreatedTaskInfo` instance into a `CreatedTaskBody` instance.
+    ///
+    /// This implementation transfers all fields from the given `CreatedTaskInfo` instance
+    /// to a new `CreatedTaskBody` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - A `CreatedTaskInfo` instance to be converted.
+    ///
+    /// # Returns
+    ///
+    /// A `CreatedTaskBody` instance with fields populated from the given `CreatedTaskInfo`.
+    fn from(value: CreatedTaskInfo) -> Self {
+        CreatedTaskBody {
+            queue: value.queue,
+            summary: value.summary,
+            parent: value.parent,
+            description: value.description,
+            sprint: value.sprint,
+            task_type: value.task_type,
+            priority: value.priority,
+            followers: value.followers,
+            assignee: value.assignee,
+            author: value.author,
+            unique: value.unique,
+            attachment_ids: value.attachment_ids,
+        }
+    }
+}
+
+impl Default for CreatedTaskInfo {
+    /// Creates a default `CreatedTaskInfo` instance.
+    ///
+    /// This implementation provides default values for all fields.
+    /// The `queue` and `summary` fields are set to placeholder strings, 
+    /// and all other fields are set to their respective default values, 
+    /// with optional fields indicating they are optional.
+    ///
+    /// # Returns
+    ///
+    /// A `CreatedTaskInfo` instance with default values.
+    fn default() -> Self {
+        CreatedTaskInfo {
+            queue: "The queue to which the task belongs".to_string(),
+            summary: "A brief summary of the task".to_string(),
+            parent: Some("The parent task ID (optional)".to_string()),
+            description: Some("A detailed description of the task (optional)".to_string()),
+            sprint: Vec::new(),
+            task_type: Some("The type of the task (optional)".to_string()),
+            priority: Some("The priority level of the task (optional)".to_string()),
+            followers: Vec::new(),
+            assignee: Some("The user assigned to the task (optional)".to_string()),
+            author: Some("The author of the task (optional)".to_string()),
+            unique: Some("A unique identifier for the task (optional)".to_string()),
+            attachment_ids: Vec::new(),
+            subtasks: HashSet::new(),
+        }
+    }
+}
+
+impl CreatedTaskInfo {
     /// Sets the parent task ID for the current task.
     ///
-    /// This method creates a new `CreatedTask` instance with the specified parent ID,
+    /// This method creates a new `CreatedTaskInfo` instance with the specified parent ID,
     /// while preserving all other fields from the original task.
     ///
     /// # Arguments
@@ -66,9 +159,9 @@ impl CreatedTask {
     ///
     /// # Returns
     ///
-    /// A new `CreatedTask` instance with the parent ID set.
-    pub fn set(&self, parent: String) -> CreatedTask {
-        return CreatedTask {
+    /// A new `CreatedTaskInfo` instance with the parent ID set.
+    pub fn set(&self, parent: String) -> CreatedTaskInfo {
+        CreatedTaskInfo {
             queue: self.queue.clone(),
             summary: self.summary.clone(),
             parent: Some(parent),
@@ -82,8 +175,9 @@ impl CreatedTask {
             unique: self.unique.clone(),
             attachment_ids: self.attachment_ids.clone(),
             subtasks: self.subtasks.clone(),
-        };
+        }
     }
+
     /// Checks if the `CreatedTask` has the required fields.
     ///
     /// This method returns `true` if both `queue` and `summary` are not empty.
@@ -97,7 +191,7 @@ impl CreatedTask {
     }
 }
 
-impl PartialEq for CreatedTask {
+impl PartialEq for CreatedTaskInfo {
     /// Compares two `CreatedTask` instances for equality.
     ///
     /// This implementation considers two tasks equal if their `queue` and `summary` fields are equal.
@@ -106,9 +200,9 @@ impl PartialEq for CreatedTask {
     }
 }
 
-impl Eq for CreatedTask {}
+impl Eq for CreatedTaskInfo {}
 
-impl Hash for CreatedTask {
+impl Hash for CreatedTaskInfo {
     /// Hashes the `CreatedTask` instance.
     ///
     /// This implementation hashes the `queue` and `summary` fields.
@@ -122,9 +216,10 @@ impl Hash for CreatedTask {
 ///
 /// # Fields
 ///
+/// * `issue_id` - The ID of the issue to be updated.
 /// * `summary` - A brief summary of the task (optional).
-/// * `description` - A detailed description of the task (optional).
 /// * `parent` - The parent task ID (optional).
+/// * `description` - A detailed description of the task (optional).
 /// * `sprint` - The sprint associated with the task (optional).
 /// * `task_type` - The type of the task (optional).
 /// * `priority` - The priority level of the task (optional).
@@ -133,12 +228,19 @@ impl Hash for CreatedTask {
 /// * `description_attachment_ids` - A list of attachment IDs for the task description (optional).
 #[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, Clone)]
 pub struct UpdatedTask {
+    #[serde(skip)]
+    pub issue_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub summary: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sprint: Option<String>,
-    #[serde(rename = "type")]
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub task_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub priority: Option<String>,
     #[serde(default)]
     pub followers: Vec<String>,
@@ -148,8 +250,95 @@ pub struct UpdatedTask {
     pub description_attachment_ids: Vec<String>,
 }
 
-impl UpdatedTask {
-    /// Checks if the `UpdatedTask` object is empty.
+/// Represents the information of a task to be updated in Yandex Tracker.
+///
+/// # Fields
+///
+/// * `issue_id` - The ID of the issue to be updated.
+/// * `summary` - A brief summary of the task (optional).
+/// * `parent` - The parent task ID (optional).
+/// * `description` - A detailed description of the task (optional).
+/// * `sprint` - The sprint associated with the task (optional).
+/// * `task_type` - The type of the task (optional).
+/// * `priority` - The priority level of the task (optional).
+/// * `followers` - A list of followers for the task (optional).
+/// * `attachment_ids` - A list of attachment IDs associated with the task (optional).
+/// * `description_attachment_ids` - A list of attachment IDs for the task description (optional).
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq)]
+pub struct UpdatedTaskInfo {
+    pub issue_id: String,
+    pub summary: Option<String>,
+    pub parent: Option<String>,
+    pub description: Option<String>,
+    pub sprint: Option<String>,
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub task_type: Option<String>,
+    pub priority: Option<String>,
+    pub followers: Vec<String>,
+    #[serde(rename = "attachmentIds", default)]
+    pub attachment_ids: Vec<String>,
+    #[serde(rename = "descriptionAttachmentIds", default)]
+    pub description_attachment_ids: Vec<String>,
+}
+
+impl From<UpdatedTaskInfo> for UpdatedTask {
+    /// Converts an `UpdatedTaskInfo` instance into an `UpdatedTask` instance.
+    ///
+    /// This implementation transfers all fields from the given `UpdatedTaskInfo` instance
+    /// to a new `UpdatedTask` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - An `UpdatedTaskInfo` instance to be converted.
+    ///
+    /// # Returns
+    ///
+    /// An `UpdatedTask` instance with fields populated from the given `UpdatedTaskInfo`.
+    fn from(value: UpdatedTaskInfo) -> Self {
+        UpdatedTask {
+            issue_id: value.issue_id,
+            summary: value.summary,
+            parent: value.parent,
+            description: value.description,
+            sprint: value.sprint,
+            task_type: value.task_type,
+            priority: value.priority,
+            followers: value.followers,
+            attachment_ids: value.attachment_ids,
+            description_attachment_ids: value.description_attachment_ids,
+        }
+    }
+}
+
+impl Default for UpdatedTaskInfo {
+    /// Creates a default `UpdatedTaskInfo` instance.
+    ///
+    /// This implementation provides default values for all fields.
+    /// The `issue_id` field is set to "issue_id task!", 
+    /// and all other fields are set to their respective default values, 
+    /// with optional fields indicating they are optional.
+    ///
+    /// # Returns
+    ///
+    /// An `UpdatedTaskInfo` instance with default values.
+    fn default() -> Self {
+        UpdatedTaskInfo {
+            issue_id: "The ID of the issue to be updated".to_string(),
+            summary: Some("A brief summary of the task (optional)".to_string()),
+            parent: Some("The parent task ID (optional)".to_string()),
+            description: Some("A detailed description of the task (optional)".to_string()),
+            sprint: Some("The sprint associated with the task (optional)".to_string()),
+            task_type: Some("The type of the task (optional)".to_string()),
+            priority: Some("The priority level of the task (optional)".to_string()),
+            followers: Vec::new(),
+            attachment_ids: Vec::new(),
+            description_attachment_ids: Vec::new(),
+        }
+    }
+}
+
+impl UpdatedTaskInfo {
+    /// Checks if the `UpdatedTaskInfo` object is empty.
     ///
     /// This method returns `true` if all fields are `None` or empty.
     ///
@@ -167,32 +356,6 @@ impl UpdatedTask {
             && self.followers.is_empty()
             && self.attachment_ids.is_empty()
             && self.description_attachment_ids.is_empty()
-    }
-}
-
-/// Represents an update operation with issue ID and the task to be updated.
-///
-/// # Fields
-///
-/// * `issue_id` - The ID of the issue to be updated.
-/// * `mut_task` - The task data to be updated.
-#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, Clone)]
-pub struct UpdateOperation {
-    pub issue_id: String,
-    pub mut_task: UpdatedTask,
-}
-
-impl UpdateOperation {
-    /// Checks if the `UpdateOperation` object is empty.
-    ///
-    /// This method returns `true` if all fields of `mut_task` are `None` or empty.
-    ///
-    /// # Returns
-    ///
-    /// * `true` - if all fields of `mut_task` are `None` or empty.
-    /// * `false` - if at least one field of `mut_task` is not `None` or empty.
-    pub fn is_empty(&self) -> bool {
-        self.mut_task.is_empty()
     }
 }
 
@@ -234,7 +397,7 @@ mod tests {
         }]
         }"#;
 
-        let task: CreatedTask = serde_json::from_str(json_data).unwrap();
+        let task: CreatedTaskInfo = serde_json::from_str(json_data).unwrap();
         assert!(task.has_required_fields());
     }
 
@@ -246,7 +409,7 @@ mod tests {
             "summary": "Minimal Task"
         }"#;
 
-        let task: CreatedTask = serde_json::from_str(json_data).unwrap();
+        let task: CreatedTaskInfo = serde_json::from_str(json_data).unwrap();
         assert!(task.has_required_fields());
     }
 
@@ -258,7 +421,7 @@ mod tests {
             "summary": ""
         }"#;
 
-        let task: CreatedTask = serde_json::from_str(json_data).unwrap();
+        let task: CreatedTaskInfo = serde_json::from_str(json_data).unwrap();
         assert!(!task.has_required_fields());
     }
 }

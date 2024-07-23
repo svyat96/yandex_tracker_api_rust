@@ -1,5 +1,7 @@
 /target
 config.toml
+config_template.toml
 token.json
 tasks.json
+tasks_template.json
 test.toml

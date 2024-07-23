@@ -1,8 +1,10 @@
-use crate::modules::task::{task_batch_error::TaskBatchError, CreatedTask, UpdateOperation};
+use crate::modules::task::{task_batch_error::TaskBatchError, CreatedTaskInfo};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
+
+use super::UpdatedTaskInfo;
 
 /// Represents a batch of operations to be performed on tasks.
 ///
@@ -13,26 +15,61 @@ use std::path::Path;
 ///
 /// * `created` - A set of tasks to be created.
 /// * `updated` - A set of tasks to be updated, represented by their issue IDs and updated data.
-/// * `deleted` - A set of issue IDs representing tasks to be deleted.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TaskBatch {
-    pub created: HashSet<CreatedTask>,
-    pub updated: HashSet<UpdateOperation>,
-    pub deleted: HashSet<String>,
+    pub created: HashSet<CreatedTaskInfo>,
+    pub updated: HashSet<UpdatedTaskInfo>,
 }
+
+impl Default for TaskBatch {
+    /// Creates a default `TaskBatch` instance.
+    ///
+    /// The default instance contains one created task with a default subtask and one updated task.
+    ///
+    /// # Returns
+    ///
+    /// A `TaskBatch` instance with default values.
+    fn default() -> Self {
+        let mut created_template_mut: HashSet<CreatedTaskInfo> = HashSet::new();
+        let mut created_task_mut = CreatedTaskInfo::default();
+        let mut subtasks_mut: HashSet<CreatedTaskInfo> = HashSet::new();
+
+        subtasks_mut.insert(CreatedTaskInfo::default());
+        created_task_mut.subtasks = subtasks_mut;
+        created_template_mut.insert(created_task_mut);
+
+        let mut updated_template_mut: HashSet<UpdatedTaskInfo> = HashSet::new();
+        updated_template_mut.insert(UpdatedTaskInfo::default());
+
+        return TaskBatch {
+            created: created_template_mut,
+            updated: updated_template_mut,
+        }
+    }
+}
+
 impl TaskBatch {
+    /// Saves the task batch to a JSON file.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), Box<dyn std::error::Error>>` - An empty result or an error.
+    pub fn save_to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let config_str = serde_json::to_string_pretty(self)?;
+        fs::write("tasks_template.json", config_str)?;
+        Ok(())
+    }
+
     /// Checks if the `TaskBatch` is valid.
     ///
-    /// This method returns `true` if all tasks in `created`, `updated`, and `deleted` sets are valid.
+    /// This method returns `true` if all tasks in `created` and `updated` sets are valid.
     ///
     /// # Returns
     ///
     /// * `true` - if all tasks are valid.
     /// * `false` - if at least one task is invalid.
     pub fn is_valid(&self) -> bool {
-        !self.has_invalid_created_tasks() &&
-        !self.has_invalid_updated_tasks() &&
-        !self.has_invalid_deleted_tasks()
+        !self.has_invalid_created_tasks() && !self.has_invalid_updated_tasks()
     }
 
     /// Checks if there are any invalid tasks in the `created` set.
@@ -63,23 +100,6 @@ impl TaskBatch {
     pub fn has_invalid_updated_tasks(&self) -> bool {
         for updated_task in &self.updated {
             if updated_task.is_empty() {
-                return true;
-            }
-        }
-        false
-    }
-
-    /// Checks if there are any invalid tasks in the `deleted` set.
-    ///
-    /// This method returns `true` if there is at least one invalid task in the `deleted` set.
-    ///
-    /// # Returns
-    ///
-    /// * `true` - if there is at least one invalid task.
-    /// * `false` - if all tasks are valid.
-    pub fn has_invalid_deleted_tasks(&self) -> bool {
-        for deleted_task in &self.deleted {
-            if deleted_task.is_empty() {
                 return true;
             }
         }
@@ -218,19 +238,6 @@ mod tests {
                 }
             ],
             "deleted": []
-        }"#;
-
-        let task_batch: TaskBatch = serde_json::from_str(json_data).unwrap();
-        assert!(!task_batch.is_valid());
-    }
-
-    #[test]
-    fn test_invalid_deleted_tasks() {
-        let json_data = r#"
-        {
-            "created": [],
-            "updated": [],
-            "deleted": [""]
         }"#;
 
         let task_batch: TaskBatch = serde_json::from_str(json_data).unwrap();

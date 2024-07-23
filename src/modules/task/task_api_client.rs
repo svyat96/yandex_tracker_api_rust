@@ -1,9 +1,9 @@
 use reqwest::Client;
 use thiserror::Error;
-use super::CreatedTask;
-use super::UpdateOperation;
+use super::CreatedTaskBody;
 use super::success_response::SuccessResponse;
 use super::error_response::ErrorResponse;
+use super::UpdatedTask;
 
 /// Represents errors that can occur while handling responses from the Yandex Tracker API.
 #[derive(Debug, Error)]
@@ -65,14 +65,14 @@ impl TaskApiClient {
     /// or `HandleResponseError` if an error occurred.
     pub async fn create_task(
         &self,
-        task_data: &CreatedTask,
+        task_data: CreatedTaskBody,
     ) -> Result<SuccessResponse, HandleResponseError> {
         let response = self
             .client
             .post("https://api.tracker.yandex.net/v2/issues")
             .header("Authorization", format!("OAuth {}", self.token))
             .header("X-Org-ID", &self.org_id)
-            .json(task_data)
+            .json(&task_data)
             .send()
             .await?;
 
@@ -94,8 +94,8 @@ impl TaskApiClient {
     ) -> Result<SuccessResponse, HandleResponseError> {
         let status = response.status();
         let text = response.text().await?;
-        
-        if status == 201 {
+
+        if status == 200 || status == 201 {
             Ok(serde_json::from_str(&text)?)
         } else {
             Err(HandleResponseError::Response(serde_json::from_str(&text)?))
@@ -114,36 +114,15 @@ impl TaskApiClient {
     /// or `HandleResponseError` if an error occurred.
     pub async fn update_task(
         &self,
-        update_operation: UpdateOperation,
+        issue_id: &str,
+        update_task: UpdatedTask,
     ) -> Result<SuccessResponse, HandleResponseError> {
         let response = self
             .client
-            .patch(&format!("https://api.tracker.yandex.net/v2/issues/{}", update_operation.issue_id))
+            .patch(&format!("https://api.tracker.yandex.net/v2/issues/{}", issue_id))
             .header("Authorization", format!("OAuth {}", self.token))
             .header("X-Org-ID", &self.org_id)
-            .json(&update_operation.mut_task)
-            .send()
-            .await?;
-
-        TaskApiClient::handle_response(response).await
-    }
-
-    /// Deletes an existing task in the Yandex Tracker.
-    ///
-    /// # Arguments
-    ///
-    /// * `issue_id` - The ID of the task to be deleted.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing `SuccessResponse` if the task was deleted successfully,
-    /// or `HandleResponseError` if an error occurred.
-    pub async fn delete_task(&self, issue_id: &str) -> Result<SuccessResponse, HandleResponseError> {
-        let response = self
-            .client
-            .delete(&format!("https://api.tracker.yandex.net/v2/issues/{}", issue_id))
-            .header("Authorization", format!("OAuth {}", self.token))
-            .header("X-Org-ID", &self.org_id)
+            .json(&update_task)
             .send()
             .await?;
 
