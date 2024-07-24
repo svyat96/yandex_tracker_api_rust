@@ -1,8 +1,8 @@
 # Yandex Tracker API Integration
 
-**Version: 0.1.2**
+**Version: 0.1.3**
 
-Author: Svyatoslav Sporyhin  
+Author: Svyatoslav Sporyhin
 Email: svyat1996@gmail.com
 
 ## Overview
@@ -41,13 +41,14 @@ organization_id = "your_org_id"
 yandex_client_id = "your_client_id"
 yandex_client_secret = "your_client_secret"
 redirect_uri = "http://localhost:8080/redirect"
+default_queue = "your_defaul_queue"
 ```
 4. Create a **tasks.json** file in the project root with the desired tasks to be processed:
 ```json
 {
     "created": [
         {
-            "queue": "YOUR_QUEUE_NAME",
+            "queue": "YOUR_QUEUE_NAME || config.toml/default_queue",
             "summary": "Example task",
             "description": "This is an example task",
             "type": "task",
@@ -102,7 +103,7 @@ To add a new task, update the **tasks.json** file as follows:
 {
     "created": [
         {
-            "queue": "YOUR_QUEUE_NAME",
+            "queue": "YOUR_QUEUE_NAME || config.toml/default_queue",
             "summary": "New task example",
             "description": "Description of the new task",
             "type": "task",
