@@ -5,9 +5,13 @@ pub mod task_batch;
 pub mod task_batch_error;
 pub mod task_manager;
 
-use serde::{Deserialize, Serialize};
+use serde::de::Error;
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
+
+use crate::config::Config;
 
 /// Represents a task to be created in Yandex Tracker.
 ///
@@ -70,13 +74,16 @@ pub struct CreatedTaskBody {
 /// * `subtasks` - A set of subtasks associated with this task.
 #[derive(Serialize, Debug, Deserialize, Clone)]
 pub struct CreatedTaskInfo {
+    #[serde(deserialize_with = "deserialize_queue")]
     pub queue: String,
     pub summary: String,
     pub parent: Option<String>,
     pub description: Option<String>,
+    #[serde(default)]
     pub sprint: Vec<String>,
     pub task_type: Option<String>,
     pub priority: Option<String>,
+    #[serde(default)]
     pub followers: Vec<String>,
     pub assignee: Option<String>,
     pub author: Option<String>,
@@ -84,6 +91,19 @@ pub struct CreatedTaskInfo {
     #[serde(rename = "attachmentIds", default)]
     pub attachment_ids: Vec<String>,
     pub subtasks: HashSet<CreatedTaskInfo>,
+}
+
+fn deserialize_queue<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = Value::deserialize(deserializer)?;
+
+    match value {
+        Value::String(v) => Ok(v.clone()),
+        Value::Null => Ok(Config::global().default_queue.clone()),
+        _ => Err(D::Error::custom("Unresolved type!")),
+    }
 }
 
 impl From<CreatedTaskInfo> for CreatedTaskBody {
@@ -121,8 +141,8 @@ impl Default for CreatedTaskInfo {
     /// Creates a default `CreatedTaskInfo` instance.
     ///
     /// This implementation provides default values for all fields.
-    /// The `queue` and `summary` fields are set to placeholder strings, 
-    /// and all other fields are set to their respective default values, 
+    /// The `queue` and `summary` fields are set to placeholder strings,
+    /// and all other fields are set to their respective default values,
     /// with optional fields indicating they are optional.
     ///
     /// # Returns
@@ -160,9 +180,9 @@ impl CreatedTaskInfo {
     /// # Returns
     ///
     /// A new `CreatedTaskInfo` instance with the parent ID set.
-    pub fn set(&self, parent: String) -> CreatedTaskInfo {
+    pub fn set(&self, parent: String, queue: String) -> CreatedTaskInfo {
         CreatedTaskInfo {
-            queue: self.queue.clone(),
+            queue: queue,
             summary: self.summary.clone(),
             parent: Some(parent),
             description: self.description.clone(),
@@ -314,8 +334,8 @@ impl Default for UpdatedTaskInfo {
     /// Creates a default `UpdatedTaskInfo` instance.
     ///
     /// This implementation provides default values for all fields.
-    /// The `issue_id` field is set to "issue_id task!", 
-    /// and all other fields are set to their respective default values, 
+    /// The `issue_id` field is set to "issue_id task!",
+    /// and all other fields are set to their respective default values,
     /// with optional fields indicating they are optional.
     ///
     /// # Returns
@@ -363,6 +383,70 @@ impl UpdatedTaskInfo {
 mod tests {
     use super::*;
     use serde_json;
+    use serde_json::json;
+
+    #[test]
+    fn test_deserialize_queue_with_value() {
+        let json_data = json!({
+            "queue": "my_queue",
+            "summary": "summary",
+            "parent": null,
+            "description": null,
+            "sprint": [],
+            "task_type": null,
+            "priority": null,
+            "followers": [],
+            "assignee": null,
+            "author": null,
+            "unique": null,
+            "attachmentIds": [],
+            "subtasks": []
+        });
+        let my_struct: CreatedTaskInfo = serde_json::from_value(json_data).unwrap();
+        assert_eq!(my_struct.queue, "my_queue");
+    }
+
+    #[test]
+    fn test_deserialize_queue_with_null() {
+        let json_data = json!({
+            "queue": null,
+            "summary": "summary",
+            "parent": null,
+            "description": null,
+            "sprint": [],
+            "task_type": null,
+            "priority": null,
+            "followers": [],
+            "assignee": null,
+            "author": null,
+            "unique": null,
+            "attachmentIds": [],
+            "subtasks": []
+        });
+        let my_struct: CreatedTaskInfo = serde_json::from_value(json_data).unwrap();
+        assert_eq!(my_struct.queue, "Default queue!");
+    }
+
+    #[test]
+    fn test_deserialize_queue_with_unresolved_type() {
+        let json_data = json!({
+            "queue": 42,
+            "summary": "summary",
+            "parent": null,
+            "description": null,
+            "sprint": [],
+            "task_type": null,
+            "priority": null,
+            "followers": [],
+            "assignee": null,
+            "author": null,
+            "unique": null,
+            "attachmentIds": [],
+            "subtasks": []
+        });
+        let result: Result<CreatedTaskInfo, _> = serde_json::from_value(json_data);
+        assert!(result.is_err());
+    }
 
     #[test]
     fn test_created_task_full() {
@@ -406,7 +490,8 @@ mod tests {
         let json_data = r#"
         {
             "queue": "main_queue",
-            "summary": "Minimal Task"
+            "summary": "Minimal Task",
+            "subtasks": []
         }"#;
 
         let task: CreatedTaskInfo = serde_json::from_str(json_data).unwrap();
@@ -418,7 +503,8 @@ mod tests {
         let json_data = r#"
         {
             "queue": "",
-            "summary": ""
+            "summary": "",
+            "subtasks": []
         }"#;
 
         let task: CreatedTaskInfo = serde_json::from_str(json_data).unwrap();

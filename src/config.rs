@@ -16,6 +16,7 @@ pub struct Config {
     pub yandex_client_id: String,
     pub yandex_client_secret: String,
     pub redirect_uri: String,
+    pub default_queue: String,
 }
 
 impl Config {
@@ -80,6 +81,7 @@ impl Default for Config {
             yandex_client_id: "default_client_id: The client ID for Yandex".to_string(),
             yandex_client_secret: "default_client_secret: The client secret for Yandex".to_string(),
             redirect_uri: "http://localhost:8000: The redirect URI for the application".to_string(),
+            default_queue: "Queue for yandex tracker api.".to_string(),
         }
     }
 }
@@ -96,6 +98,7 @@ mod tests {
         yandex_client_id = "test_client_id"
         yandex_client_secret = "test_client_secret"
         redirect_uri = "http://localhost:8080/redirect"
+        default_queue: "TESTAPI",
         "#;
 
         let file_path = "test_config.toml";
@@ -107,6 +110,7 @@ mod tests {
         assert_eq!(config.yandex_client_id, "test_client_id");
         assert_eq!(config.yandex_client_secret, "test_client_secret");
         assert_eq!(config.redirect_uri, "http://localhost:8080/redirect");
+        assert_eq!(config.default_queue, "TESTAPI");
 
         // Удалим временный файл после теста
         std::fs::remove_file(file_path).expect("Failed to delete test config file");

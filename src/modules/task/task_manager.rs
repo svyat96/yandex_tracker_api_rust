@@ -39,7 +39,8 @@ impl TaskBatchHandler {
             .process_tasks_create_task(task_batch_mut, duration)
             .await?;
 
-        self.process_tasks_update_task(task_batch_mut, duration).await?;
+        self.process_tasks_update_task(task_batch_mut, duration)
+            .await?;
 
         Ok(())
     }
@@ -63,7 +64,8 @@ impl TaskBatchHandler {
             self.api_client
                 .update_task(
                     &update_task_info.issue_id,
-                    UpdatedTask::from(update_task_info.clone()))
+                    UpdatedTask::from(update_task_info.clone()),
+                )
                 .await?;
 
             sleep(duration).await;
@@ -108,9 +110,10 @@ impl TaskBatchHandler {
                     task_batch_mut.created.remove(task_from_created);
 
                     for task_from_subtask in subtask {
-                        task_batch_mut
-                            .created
-                            .insert(task_from_subtask.set(response.key.clone()));
+                        task_batch_mut.created.insert(
+                            task_from_subtask
+                                .set(response.key.clone(), task_from_created.queue.clone()),
+                        );
                     }
                     self.save_task_batch(&task_batch_mut)?;
                 }
