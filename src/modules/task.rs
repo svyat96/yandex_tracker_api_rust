@@ -5,9 +5,7 @@ pub mod task_batch;
 pub mod task_batch_error;
 pub mod task_manager;
 
-use serde::de::Error;
-use serde::{Deserialize, Deserializer, Serialize};
-use serde_json::Value;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 
@@ -74,7 +72,7 @@ pub struct CreatedTaskBody {
 /// * `subtasks` - A set of subtasks associated with this task.
 #[derive(Serialize, Debug, Deserialize, Clone)]
 pub struct CreatedTaskInfo {
-    #[serde(deserialize_with = "deserialize_queue")]
+    #[serde(default = "default_queue")]
     pub queue: String,
     pub summary: String,
     pub parent: Option<String>,
@@ -93,17 +91,18 @@ pub struct CreatedTaskInfo {
     pub subtasks: HashSet<CreatedTaskInfo>,
 }
 
-fn deserialize_queue<'de, D>(deserializer: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value = Value::deserialize(deserializer)?;
-
-    match value {
-        Value::String(v) => Ok(v.clone()),
-        Value::Null => Ok(Config::global().default_queue.clone()),
-        _ => Err(D::Error::custom("Unresolved type!")),
-    }
+/// Provides a default value for the `queue` field in `CreatedTaskInfo`.
+///
+/// This function retrieves the global configuration and returns the default
+/// queue value specified in the configuration. It is used in the `CreatedTaskInfo`
+/// struct to ensure that the `queue` field has a valid value if it is not provided
+/// during deserialization.
+///
+/// # Returns
+///
+/// A `String` representing the default queue value from the global configuration.
+fn default_queue() -> String {
+    Config::global().default_queue.clone()
 }
 
 impl From<CreatedTaskInfo> for CreatedTaskBody {
@@ -502,12 +501,16 @@ mod tests {
     fn test_created_task_empty_fields() {
         let json_data = r#"
         {
-            "queue": "",
             "summary": "",
             "subtasks": []
         }"#;
 
         let task: CreatedTaskInfo = serde_json::from_str(json_data).unwrap();
+
+        println!("{:#?}", task);
+        println!("Default queue: {:#?}", Config::global().default_queue);
+
         assert!(!task.has_required_fields());
+        assert!(task.queue == Config::global().default_queue);
     }
 }
